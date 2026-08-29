@@ -33,6 +33,6 @@ testing_loader = ImageClassificationLoader(
 
 model = CNNModel(224, 3)
 
-trainer = ClassificationTrainer(model, epochs=2)
+trainer = ClassificationTrainer(model, epochs=40)
 trainer.fit(training_loader, output_folder_path="output_results")
 trainer.testing(testing_loader)
