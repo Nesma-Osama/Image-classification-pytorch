@@ -23,7 +23,7 @@ class ClassificationTrainer:
                 loss.backward()
                 self.optimizer.step()
                 running_loss += loss
-            print(f"Epoch {e+1}/{self.epochs} loss {running_loss/images.size(0)} ")
+            print(f"Epoch {e+1}/{self.epochs} loss {running_loss/len(loader)} ")
         path = os.path.join(output_folder_path, "cnn.pth")
 
         torch.save(self.model.state_dict(), path)
