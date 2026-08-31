@@ -1,64 +1,41 @@
 # 🐱🐶🧑 Image Classification with PyTorch
 
-A modular **image classification project built with PyTorch** that classifies images into three categories:
+This is a simple image classification project using **PyTorch**. The model classifies images into three classes:
 
-* 🐱 **Cat**
-* 🐶 **Dog**
-* 🧑 **Person**
+* 🐱 Cat
+* 🐶 Dog
+* 🧑 Person
 
-The project is structured using separate components for **dataset handling, data loading, model architecture, training, evaluation, and inference**, making it easy to understand, maintain, and extend.
+I implemented two models in this project:
+
+* A custom CNN built using PyTorch
+* VGG16 using transfer learning
+
+The project is divided into different files for the dataset, dataloader, models, training, and prediction.
 
 ---
 
 ## 📌 Project Overview
 
-This project uses a custom **Convolutional Neural Network (CNN)** to classify images into one of three classes.
-
-The complete pipeline is:
+The main workflow is:
 
 ```text
 Images
-   │
-   ▼
+   ↓
 Dataset
-   │
-   ▼
+   ↓
 DataLoader
-   │
-   ▼
-CNN Model
-   │
-   ├── Training ──► Trained Model (.pth)
-   │
-   └── Testing ──► Accuracy
-                    
-
-New Image
-   │
-   ▼
-Preprocessing
-   │
-   ▼
-Trained CNN
-   │
-   ▼
-Predicted Class
-(Cat / Dog / Person)
+   ↓
+CNN / VGG16
+   ↓
+Training
+   ↓
+Saved Model
+   ↓
+Prediction
 ```
 
----
-
-## ✨ Features
-
-* Custom PyTorch `Dataset`
-* PyTorch `DataLoader`
-* Custom CNN architecture
-* Image resizing and normalization
-* Batch training
-* Cross-entropy loss
-* Adam optimizer
-* GPU/CPU support
-* Class-name mapping saved using Pickle
+For VGG16, I used the pretrained model and froze the feature extraction layers, then replaced the last layer to work with the three classes in my dataset.
 
 ---
 
@@ -66,6 +43,7 @@ Predicted Class
 
 ```text
 ImageClassification/
+
 │
 ├── data/
 │   └── Classification_dataset_v3/
@@ -84,26 +62,23 @@ ImageClassification/
 │   ├── __init__.py
 │   ├── datasets.py
 │   ├── dataloader.py
-│   ├── model.py
+│   ├── cnn_model.py
+│   ├── vgg_model.py
 │   ├── trainer.py
 │   └── predicter.py
 │
 ├── train.py
 ├── predict.py
-│
 ├── output_results/
-│   ├── cnn.pth
-│   └── class_name_mapping.pkl
-│
 ├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## 🧠 Model Architecture
+## 🧠 CNN Model
 
-The model is a custom CNN consisting of four convolutional blocks.
+The first model is a custom CNN with four convolutional blocks.
 
 Each block contains:
 
@@ -117,13 +92,13 @@ ReLU
 Max Pooling
 ```
 
-The convolutional layers use the following channel sizes:
+The number of channels increases as follows:
 
 ```text
 3 → 32 → 64 → 128 → 256
 ```
 
-After the convolutional layers, the feature maps are flattened and passed through fully connected layers:
+After the convolutional layers, the output is flattened and passed through fully connected layers:
 
 ```text
 Flatten
@@ -139,7 +114,7 @@ ReLU
 Linear → 3
 ```
 
-The final layer produces **3 logits**, one for each class:
+The final layer has 3 outputs for:
 
 ```text
 0 → Cat
@@ -147,162 +122,253 @@ The final layer produces **3 logits**, one for each class:
 2 → Person
 ```
 
-The actual mapping is automatically created from the dataset folders and saved as:
+The class mapping is created from the dataset folders and saved using Pickle.
+
+---
+
+## 🧠 VGG16 Transfer Learning
+
+I also added **VGG16** using transfer learning.
+
+Instead of training VGG16 from the beginning, I used the pretrained weights from ImageNet.
+
+The feature extraction layers are frozen:
+
+```python
+for param in model.features.parameters():
+    param.requires_grad = False
+```
+
+Then I replaced the last layer of the classifier because the original VGG16 model is made for 1000 ImageNet classes, while this project only has 3 classes.
+
+```python
+in_features = model.classifier[-1].in_features
+
+model.classifier[-1] = nn.Linear(
+    in_features,
+    3
+)
+```
+
+So the basic idea is:
 
 ```text
-class_name_mapping.pkl
+Image
+  ↓
+VGG16 Features
+  ↓
+Frozen pretrained layers
+  ↓
+Classifier
+  ↓
+3 classes
 ```
 
 ---
 
+## 🔄 Image Preprocessing
+
+The images are resized to:
+
+```text
+224 × 224
+```
+
+For training, I used random horizontal flipping as a simple data augmentation technique.
+
+The images are also normalized using the ImageNet mean and standard deviation:
+
+```python
+mean = [0.485, 0.456, 0.406]
+std = [0.229, 0.224, 0.225]
+```
+
+Training:
+
+```text
+Resize
+  ↓
+Random Horizontal Flip
+  ↓
+ToTensor
+  ↓
+Normalize
+```
+
+Testing:
+
+```text
+Resize
+  ↓
+ToTensor
+  ↓
+Normalize
+```
+
+---
 
 ## 🚂 Training
 
-Run:
+To start training:
 
 ```bash
 python train.py
 ```
 
-The training script:
+The script asks which model to use:
 
-1. Creates the training dataset.
-2. Creates the test dataset.
-3. Creates DataLoaders.
-4. Initializes the CNN.
-5. Trains the model.
-6. Saves the trained model.
-7. Evaluates the model on the test dataset.
+```text
+Enter model name (vgg/cnn):
+```
 
-The training configuration currently uses:
+Enter:
+
+```text
+cnn
+```
+
+to train the custom CNN, or:
+
+```text
+vgg
+```
+
+to train the VGG16 model.
+
+The training uses:
 
 ```text
 Batch size: 32
-Learning rate: 0.001
-Epochs: 40
 Optimizer: Adam
 Loss: CrossEntropyLoss
+```
+
+The trained models are saved as `.pth` files.
+
+For example:
+
+```text
+output_results/
+├── cnn.pth
+├── vgg.pth
+└── class_name_mapping.pkl
 ```
 
 ---
 
 ## 📊 Dataset
 
-The dataset used in this project is available on Google Drive:
+The dataset contains three classes:
+
+```text
+cat
+dog
+person
+```
+
+The dataset is available here:
 
 **[Download the Dataset](https://drive.google.com/file/d/1G9H2W0R6JLYYBXyHNM_kAcBufUJr4Qsy/view?usp=drive_link)**
 
-After downloading the dataset, extract it and place the `Classification_dataset_v3` folder inside the project's `data` directory.
+After downloading it, place the `Classification_dataset_v3` folder inside the `data` folder.
 
-The final structure should look like:
+The structure should be:
 
 ```text
-ImageClassification/
-│
-├── data/
-│   └── Classification_dataset_v3/
-│       └── images/
-│           ├── train/
-│           │   ├── cat/
-│           │   ├── dog/
-│           │   └── person/
-│           │
-│           └── test/
-│               ├── cat/
-│               ├── dog/
-│               └── person/
-│
-├── src/
-├── train.py
-├── predict.py
-└── requirements.txt
+data/
+└── Classification_dataset_v3/
+    └── images/
+        ├── train/
+        │   ├── cat/
+        │   ├── dog/
+        │   └── person/
+        │
+        └── test/
+            ├── cat/
+            ├── dog/
+            └── person/
 ```
-
-> **Important:** The dataset must be placed inside the `data/` folder before running the training script.
 
 ---
 
-## 🚀 Running the Project
+## 🚀 How to Run
 
 ### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Nesma-Osama/Image-classification-pytorch.git
+
 cd Image-classification-pytorch
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create a virtual environment
 
-**Windows:**
+Windows:
 
 ```bash
 python -m venv venv
 venv\Scripts\activate
 ```
 
-**Linux/macOS:**
+Linux/macOS:
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 3. Install dependencies
+### 3. Install the requirements
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Download the dataset
+### 4. Add the dataset
 
-Download the dataset from:
-
-**[Google Drive Dataset](https://drive.google.com/file/d/1G9H2W0R6JLYYBXyHNM_kAcBufUJr4Qsy/view?usp=drive_link)**
-
-Extract the downloaded folder and place:
+Download the dataset and put it inside:
 
 ```text
-Classification_dataset_v3/
+data/Classification_dataset_v3/
 ```
 
-inside:
-
-```text
-data/
-```
-
-So you should have:
-
-```text
-data/Classification_dataset_v3/images/train/
-data/Classification_dataset_v3/images/test/
-```
-
-### 5. Train the model
-
-Run:
+### 5. Train
 
 ```bash
 python train.py
 ```
 
-After training, the trained model and class mapping will be saved in:
+Choose either:
 
 ```text
-output_results/
-├── cnn.pth
-└── class_name_mapping.pkl
+cnn
 ```
 
-### 6. Run inference
+or:
 
-After training, you can use the trained model to classify a new image:
+```text
+vgg
+```
+
+### 6. Predict an image
+
+After training:
 
 ```bash
 python predict.py
 ```
+Choose either:
 
-The predictor loads the saved model and class mapping and returns one of:
+```text
+cnn
+```
+
+or:
+
+```text
+vgg
+```
+
+The model will predict one of:
 
 ```text
 Cat
@@ -310,39 +376,16 @@ Dog
 Person
 ```
 
-
-
 ---
 
-## 🛠️ Technologies Used
+## 🛠️ Technologies
 
-| Technology  | Purpose                      |
-| ----------- | ---------------------------- |
-| Python      | Programming language         |
-| PyTorch     | Deep learning framework      |
-| Torchvision | Image transformations        |
-| Pillow      | Image loading and processing |
-| NumPy       | Tensor/image manipulation    |
-| Matplotlib  | Image visualization          |
-| Pickle      | Saving class mappings        |
+* Python
+* PyTorch
+* Torchvision
+* Pillow
+* NumPy
+* Matplotlib
+* Pickle
 
 ---
-
-## 🎯 Project Goals
-
-This project demonstrates how to build a complete image-classification pipeline with PyTorch, including:
-
-* Custom dataset implementation
-* DataLoader creation
-* CNN architecture design
-* Image preprocessing
-* Model training
-* Model evaluation
-* Model serialization
-* Class mapping management
-* Single-image inference
-
-The modular architecture also makes it easier to replace the CNN, modify preprocessing, change the dataset, or integrate the trained model into another application.
-
----
-

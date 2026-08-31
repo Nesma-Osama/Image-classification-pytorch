@@ -11,7 +11,7 @@ class ClassificationTrainer:
         self.optimizer = optim.Adam(model.parameters(), lr=lr)
         self.loss = nn.CrossEntropyLoss()
 
-    def fit(self, loader, output_folder_path):
+    def fit(self, loader, output_folder_path,file_name="cnn.pth"):
         for e in range(self.epochs):
             self.model.train()
             running_loss = 0.0
@@ -24,7 +24,7 @@ class ClassificationTrainer:
                 self.optimizer.step()
                 running_loss += loss
             print(f"Epoch {e+1}/{self.epochs} loss {running_loss/len(loader)} ")
-        path = os.path.join(output_folder_path, "cnn.pth")
+        path = os.path.join(output_folder_path, file_name)
 
         torch.save(self.model.state_dict(), path)
 
